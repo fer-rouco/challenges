@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playful Box</title>
+</head>
+<body>
+    <span>Time: <span class='time'></span> seconds</span>
+    <span>Box size: <span class='box-size' ></span></span>
+    <div class='box' ></div>
+    <style>
+        .box {
+            position: absolute;
+            background-color: #000000;
+            height: 50px;
+            width: 50px;
+        }
+    </style>
+    <script>
+        const box = document.getElementsByClassName('box')[0];
+        const time = document.getElementsByClassName('time')[0];
+        const boxSize = document.getElementsByClassName('box-size')[0];
+        const intervalTime = 1000;
+        let interval = null;
+
+        function getCurrentBoxWidth() {
+            return Number.parseInt(box.offsetWidth);
+        }
+
+        function increaseWidth(quantityToIncrease) {
+            const currentWidth = getCurrentBoxWidth();
+            const nextWidth = currentWidth + quantityToIncrease;
+            
+            if (currentWidth > window.innerWidth) {
+                console.error("The box is too big.");
+                clearInterval(interval);
+                interval = null;
+                return;
+            }
+            
+            if(isNaN(nextWidth)) {
+                return;
+            }
+            
+            const nextWidthInPx = `${nextWidth}px`;
+            box.style.width = nextWidthInPx;
+            boxSize.innerHTML = nextWidthInPx;
+        }
+
+        function increaseWidthInterval() {
+            if (!interval) {
+                interval = setInterval(() => {
+                    if (getCurrentBoxWidth() < 100) {
+                        increaseWidth(2);
+                        const timeInSeconds = ((time.innerHTML.length === 0) ? intervalTime : parseInt(time.innerHTML * 1000) + intervalTime) / 1000;
+                        time.innerHTML = `${timeInSeconds}`;
+                    }
+                    else {
+                        clearInterval(interval);
+                        interval = null;
+                    }
+                }, intervalTime);
+            }
+        }
+
+        function handleClick() {
+            increaseWidth(-5);
+            box.style.top = `${Math.floor(Math.random() * window.innerHeight)}px`;
+            box.style.left = `${Math.floor(Math.random() * window.innerWidth)}px`;
+            const degrees = Number.parseInt(box.style.transform.replace("rotate(", '').replace('deg)', ''));
+            box.style.transform = `rotate(${(isNaN(degrees) ? 0 : degrees) + 15}deg)`;
+            increaseWidthInterval();
+        }
+
+        (() => {
+            box.addEventListener("click", handleClick);
+            increaseWidthInterval();
+        })();
+    </script>
+</body>
+</html>

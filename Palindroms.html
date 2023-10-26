@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Palindroms</title>
+
+    <script>
+        function palindromsQuantity(word) {
+            let palindromsCounter = 0;
+            for (let index = 0; index < word.length - 1; index++) {
+                for (let innerIndex = index + 1; innerIndex < word.length; innerIndex++) {
+                    let chars = word.substring(index, innerIndex + 1);
+                    palindromsCounter += isTheWordAPalindrom(chars) ? 1 : 0;
+                }
+            }
+            
+            return palindromsCounter;
+        }
+
+        function isTheWordAPalindrom(word) {
+            if (word.length <= 1) {
+                return false;
+            }
+            
+            let palindromFlag = true;
+            const middleLength = Math.floor(word.length / 2);
+            // console.log(`middleLength: ${middleLength}`);
+            
+            for (let index = 0; index < middleLength && palindromFlag; index++) {
+                const char = word[index];
+                const charFromEnd = word[word.length - index - 1];
+                palindromFlag = (char === charFromEnd);
+                // if (char !== charFromEnd) {
+                //     palindromFlag = false;
+                // }
+            }
+            
+            // if (palindromFlag) {
+            //   console.log(`PALINDROM FOUND: ${word}`);
+            // }
+
+            return palindromFlag;
+        }
+
+        // console.log("Palindrom",  palindromsQuantity("abaaba"));
+
+        function expectToBeEqual(param1, param2) {
+            console.log(`Expect ${param1} to be ${param2}: ${param1 === param2}`);
+        }
+
+        expectToBeEqual(palindromsQuantity("abaaba"), 5);
+        expectToBeEqual(palindromsQuantity("solos"), 2);
+        expectToBeEqual(palindromsQuantity("rotor"), 2);
+        expectToBeEqual(palindromsQuantity("somos"), 2);
+        expectToBeEqual(palindromsQuantity("narran"), 3); 
+        expectToBeEqual(palindromsQuantity("salas"), 2); 
+        expectToBeEqual(palindromsQuantity("salsa"), 0);
+        expectToBeEqual(palindromsQuantity("aa"), 1);
+        expectToBeEqual(palindromsQuantity("aab"), 1);
+        expectToBeEqual(palindromsQuantity("aabb"), 2);
+        expectToBeEqual(palindromsQuantity("aabbaa"), 5);
+        expectToBeEqual(palindromsQuantity("aabba"), 3);
+        expectToBeEqual(palindromsQuantity("paralelepipedo"), 5);
+        expectToBeEqual(palindromsQuantity("sagas"), 2);
+        expectToBeEqual(palindromsQuantity("sallas"), 3);
+    </script>
+</head>
+<body>
+    
+</body>
+</html>
