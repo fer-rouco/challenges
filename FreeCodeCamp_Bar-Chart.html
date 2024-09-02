@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FreeCodeCamp BarChart Project</title>
+</head>
+<body>
+  <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+  <header>
+  </header>
+  <main>
+    <div class="chart-container">
+      <h1 id="title" class="title" >United States GDP</h1>
+      <div id="chart" class="chart" ></div>
+      <div id="tooltip" class="tooltip" style="display: none;"></div>
+    </div>
+  </main>
+  <style>
+    body {
+      background-color: #4C7766;
+    }
+    
+    main {
+      display: grid;
+      place-items: center;
+      height: 100vh;
+    }
+
+    .chart-container {
+      background-color: #EBE6E0;
+      width: 940px;
+      height: 600px;
+      
+      .title {
+        color: #036840;
+        text-align: center;
+        font-size: 2.5em;
+        font-family: 'Roboto';
+        font-weight: 400;
+      }
+
+      .chart {
+        width: fit-content;
+        margin: auto;
+        
+        .bar {
+          fill: #7AA888;
+         
+          &:hover {
+            fill: #EBE6E0;
+          }
+        }
+      }
+
+      .tooltip {
+        position: absolute;
+        top: 0;
+        left: 0;
+        padding: 10px;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        pointer-events: none;
+        .align {
+          display: flex;
+          justify-content: center;
+        }
+      }
+    }
+  </style>
+  <script type="module">
+
+    import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+    fetch("https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json")
+    .then(response => response.json())
+    .then(data => {
+      buildChart(data.data);
+    });
+
+    function buildChart(dataset) {
+      const extractYear = (d) => d[0].split("-")[0];
+      const calculateQ = (d) => {
+        const Q1 = "Q1", Q2 = "Q2", Q3 = "Q3", Q4 = "Q4";
+        const month = parseInt(d[0].split("-")[1]);
+        switch(month) {
+          case 1: 
+          case 2:
+          case 3:
+            return  Q1;
+          case 4:
+          case 5:
+          case 6:
+            return Q2;
+          case 7:
+          case 8:
+          case 9:
+            return Q3;
+          case 10:
+          case 11:
+          case 12:
+            return Q4;
+        }
+      }
+      const formatCurrency = (d) => `$ ${d[1]} Billon`;
+      const showTooltip = (d, x, y) => {
+        d3.select("#tooltip")
+          .style("display", "block")
+          .style("top", (y + 10) + "px")
+          .style("left", (x + 10) + "px")
+          .attr("data-date", () => 
+            { return d[0]})
+          // .html("<strong>" + data[0] + "</strong><br>" + data[1])
+          .html(`<span class="align" >${extractYear(d)} ${calculateQ(d)}</span><span class="align" >${formatCurrency(d)}</span>`)
+      }
+      const w = 900;
+      const h = 460;
+      const padding = 60;
+      const barWidth = (((h - padding) / dataset.length) * 2) - 0.045;
+
+      const xScale = d3.scaleLinear()
+        .domain([d3.min(dataset, extractYear), d3.max(dataset, extractYear)])
+        .range([padding, w - padding]);
+
+      const yScale = d3.scaleLinear()
+        .domain([0, d3.max(dataset, (d) => d[1])])
+        .range([h - padding, 0]);
+
+      const svg = d3.select(".chart")
+                    .append("svg")
+                    .attr("width", w)
+                    .attr("height", h);
+
+      svg.selectAll("rect")
+        .data(dataset)
+        .enter()
+        .append("rect")
+        .attr("x", (d, i) => i * barWidth)
+        .attr("y", (d, i) => h - yScale(padding - d[1]) + 340)
+        .attr("width", barWidth)
+        .attr("height", (d, i) => h - padding - yScale(d[1]) )
+        .attr("data-gdp", (d) => d[1])
+        .attr("data-date", (d) => d[0])
+        .attr("class", "bar")
+        .attr("transform", "translate(" + padding + ", 0)")
+        .on("mouseover", function(event, data) {
+          const x = event.clientX;
+          const y = event.clientY;
+          showTooltip(data, x, y);
+        })
+        .on("mouseout", function() {
+          d3.select("#tooltip").style("display", "none");
+        });
+
+
+      const xAxis = d3.axisBottom(xScale).tickFormat(d3.format("d"));
+      const yAxis = d3.axisLeft(yScale);
+
+      svg.append("g")
+        .attr("id", "x-axis")
+        .attr("transform", "translate(0," + (h - padding) + ")")
+        .call(xAxis);
+
+      svg.append("g")
+        .attr("id", "y-axis")
+        .attr("transform", "translate(" + padding + ", 0)")
+        .call(yAxis);
+    }
+  </script>
+</body>
+</html>
+
