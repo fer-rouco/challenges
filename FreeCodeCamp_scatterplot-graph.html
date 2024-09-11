@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+  </head>
+  <body>
+    <main>
+      <div class="title">
+        <h1 id="title" class="title" >Doping in Professional Bicycle Racing</h1>
+        <h2>35 Fastest times up Alpe d'Huez</h2>  
+      </div>
+      <div id="tooltip" class="tooltip" style="display: none;"></div>
+      <!-- <svg class="graph" width="920" height="630" ></svg> -->
+    </main>
+    
+    <style>   
+      html, body, h1, h2 {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'Arial';
+        display: flex;
+        flex-direction: column;
+        align-items: center; 
+      }
+
+      main {
+        display: grid;
+        place-items: center;
+      }
+
+      .title {
+        margin: 20px;
+        text-align: center;
+      }
+
+      .tooltip {
+        position: absolute;
+        top: 0;
+        left: 0;
+        padding: 10px;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        pointer-events: none;
+        .align {
+          display: flex;
+          justify-content: center;
+        }
+      }
+      .reference-text {
+        font-family: sans-serif;
+        font-size: 10px;
+      }
+    </style>
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+    <script type="module">
+  
+      import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+  
+      fetch("https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json")
+      .then(response => response.json())
+      .then(data => {
+        data.forEach((dataItem) => {
+          const parsedTime = dataItem.Time.split(':');
+          dataItem.TimeAsDateObject = new Date(1970, 0, 1, 0, parsedTime[0], parsedTime[1]);
+        });
+        buildChart(data);
+      });
+      
+  
+      function buildChart(dataset) {
+        const extractYear = (d) => d.Year;
+        const timeToDate = (d) => {
+          const partesTiempo = d.Time.split(':');
+          const horas = parseInt(partesTiempo[0]);
+          const minutos = parseInt(partesTiempo[1]);
+
+          const fechaBase = new Date();
+          fechaBase.setHours(fechaBase.getHours() + horas);
+          fechaBase.setMinutes(fechaBase.getMinutes() + minutos);
+          return fechaBase;
+        }
+        const showTooltip = (d, x, y) => {
+          d3.select("#tooltip")
+            .style("display", "block")
+            .style("top", (y + 10) + "px")
+            .style("left", (x + 10) + "px")
+            .attr("data-year", () => d.Year)
+            .html(`<span>${d.Name}: ${d.Nationality}</span><br><span>Year: ${d.Year}, Time: ${d.Time}</span><br><br><span>${d.Doping}</span>`)
+        }
+        const margin = 30;
+        const width = 920 - margin - margin; // 860
+        const height = 630 - margin - margin; // 560
+
+        const references = [
+          { text: "No doping allegations", color: "rgb(255, 127, 14)" },
+          { text: "Riders with doping allegations", color: "rgb(31, 119, 180)" }
+        ]
+
+        const widthRef = 18;
+  
+        const svg = d3.select("body")
+          .append("svg")
+          .attr("width", width + margin + margin)
+          .attr("height", height + margin + margin)
+          .attr('class', 'graph')
+          .append('g')
+          .attr('transform', 'translate(' + margin + ',' + margin + ')');
+        
+        // Dibujar referencias
+        const gLegend = svg.append("g")
+          .attr("id", "legend")
+          .attr("class", "key")
+          .attr("transform", "translate(0,40)")
+          .attr("fill", "none")
+          .attr("anchor", "middle");
+        
+        gLegend
+          .selectAll("rect")
+          .data(references)
+          .enter()
+          .append("rect")
+          .attr("x", (d, i) => width - 50)
+          .attr("y", (d, i) => (i * 20) + height / 2)
+          .attr("width", widthRef)
+          .attr("height", widthRef)
+          .attr("fill", (d) => d.color);
+
+        const gLegendTick = gLegend.selectAll("g")
+          .data(references)
+          .enter()
+          .append("g")
+          .attr("class", "tick")
+          .attr("opacity", 1)
+          .attr("transform", (d, i) => `translate(${height + 80},${(i * 20) + height / 2})`);
+
+        gLegendTick
+          .append("text")
+          .attr("fill", "currentColor")
+          .attr("y", widthRef / 1.5)
+          .attr("class", "reference-text")
+          .text((d, i) => {
+            return `${d.text}`
+          });
+
+        const xScale = d3.scaleLinear().range([0, width]);
+        const yScale = d3.scaleTime().range([margin, height - margin]);
+
+        const timeFormat = d3.timeFormat('%M:%S');
+        const xAxis = d3.axisBottom(xScale).tickFormat(d3.format("d"));
+        const yAxis = d3.axisLeft(yScale).tickFormat(timeFormat);
+
+        const minYear = d3.min(dataset, extractYear) -1;
+        const widthByPeriod = width / ((d3.max(dataset, extractYear) + 1) - minYear);
+
+        yScale.domain(
+          d3.extent(dataset, (dataItem) => {
+            return dataItem.TimeAsDateObject;
+          })
+        );
+        xScale.domain([
+          d3.min(dataset, (dataItem) => {
+            return dataItem.Year - 1;
+          }),
+          d3.max(dataset, (dataItem) => {
+            return dataItem.Year + 1;
+          })
+        ]);
+
+        svg.append("g")
+          .attr("id", "x-axis")
+          .attr("transform", `translate(${margin},${height - margin})`)
+          .call(xAxis)
+  
+        svg.append("g")
+          .attr("id", "y-axis")
+          .attr("transform", "translate(" + margin + ", 0)")
+          .call(yAxis)
+          .append('text')
+
+        svg.selectAll("circle")
+          .data(dataset)
+          .enter()
+          .append("circle")
+          .attr("r", 6)
+          .attr("cx", (d, i) => xScale(d.Year))
+          .attr("cy", (d, i) => yScale(d.TimeAsDateObject))
+          .attr("data-xvalue", (d) => d.Year)
+          .attr("data-yvalue", (d) => d.TimeAsDateObject.toISOString())
+          .attr("class", "dot")
+          .attr("stroke", "#000")
+          .attr("opacity", "0.8")
+          .attr("fill", (d) => references[(d.Doping) ? 1 : 0].color)
+          .attr("transform", "translate(" + margin + ", 0)")
+          .on("mouseover", function(event, data) {
+            const x = event.clientX;
+            const y = event.clientY;
+            showTooltip(data, x, y);
+          })
+          .on("mouseout", function() {
+            d3.select("#tooltip").style("display", "none");
+          });
+
+      }
+    </script>
+  
+  </body>
+</html>
