@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+  </head>
+  <body>
+    <main>
+      <div class="title-division">
+        <h1 id="title" class="title" >Monthly Global Land-Surface Temperature</h1>
+      </div>
+      <div id="tooltip" class="tooltip" style="display: none;"></div>
+    </main>
+    
+    <style>
+      /* :root {
+        background-color: #181a1b;
+        color: #e8e6e3;
+      } */
+
+      svg:not(:root) {
+        overflow-clip-margin: content-box;
+        overflow: hidden;
+      }
+
+      html, body {
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: 'Arial';
+        display: flex;
+        flex-direction: column;
+        align-items: center; 
+      }
+
+      main {
+        text-align: center;
+        max-width: 100%;
+      }
+
+      .tooltip {
+        position: absolute;
+        top: 0;
+        left: 0;
+        padding: 10px;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        pointer-events: none;
+        .align {
+          display: flex;
+          justify-content: center;
+        }
+      }
+    </style>
+    <script src="https://cdn.freecodecamp.org/testable-projects-fcc/v1/bundle.js"></script>
+    <script type="module">       
+      import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
+
+      fetch("https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/global-temperature.json")
+      .then(response => response.json())
+      .then(data => {
+        const references = {
+          values: [2.8, 3.9, 5.0, 6.1, 7.2, 8.3, 9.5, 10.6, 11.7, 12.8],
+          colors: ['#a50026', '#d73027', '#f46d43', '#fdae61', '#fee090', '#ffffbf', '#e0f3f8', '#abd9e9', '#74add1', '#4575b4', '#313695'].reverse()
+        }
+        const padding = {
+          left: 140,
+          right: 140,
+          top: 20,
+          bottom: 150
+        }
+        const width = 5 * Math.ceil(data.monthlyVariance.length / 12);
+        const height = 33 * 12;
+        const main = d3.select('body').select('main');
+        const svg = main
+          .append("svg")
+          .attr("width", width + (padding.left + padding.right))
+          .attr("height", height + (padding.top + padding.bottom));
+
+        function renderSubTitle(main, data) {
+          const titleDivision = main.select('.title-division')
+          .append('h3')
+          .attr('id', 'description')
+          .html(
+            data.monthlyVariance[0].year +
+              ' - ' +
+              data.monthlyVariance[data.monthlyVariance.length - 1].year +
+              ': base temperature ' +
+              data.baseTemperature +
+              '&#8451;'
+          );
+        }
+
+        function renderTooltip(dataItem, x, y) {
+          var date = new Date(dataItem.year, dataItem.month);
+          d3.select("#tooltip")
+            .style("display", "block")
+            .style("top", (y + 10) + "px")
+            .style("left", (x + 10) + "px")
+            .attr("data-year", dataItem.year)
+            .html(`<span>${d3.utcFormat('%Y - %B')(date)}</span><br><span>${dataItem.variance}</span>`)
+        }
+
+        function renderLegends(svg) {
+          const threshold = d3.scaleThreshold()
+            .domain(references.values)
+            .range(references.colors);
+
+          const x = d3.scaleLinear()
+            .domain([1.7, 13.9])
+            .range([0, 330]);
+
+          const xAxis = d3.axisBottom(x)
+            .tickSize(13)
+            .tickValues(threshold.domain())
+            .tickFormat(d3.format('.1f'));
+
+          const g = svg.append("g")
+            .attr("id", "legend")
+            .attr("transform", `translate(${padding.left}, ${height + padding.bottom - 20})`)
+            .call(xAxis);
+
+          g.selectAll("rect")
+            .data(threshold.range().map((color) =>   {
+              var d = threshold.invertExtent(color);
+              if (d[0] == null) {
+                d[0] = x.domain()[0]
+              }
+              if (d[1] == null) {
+                d[1] = x.domain()[1]
+              }
+              return d;
+            }))
+            .enter()
+            .insert("rect", ".tick")
+            .attr("transform", "translate(0,-25)")
+            .attr("width", 30)
+            .attr("height", 25)
+            .attr("x", (d, i) => i * 30)
+            .attr("fill", (d, i) => (i !== 0 && i !== threshold.domain().length) ? threshold(d[0]) : "" )
+            .attr("stroke", (d, i) => (i !== 0 && i !== threshold.domain().length) ? "currentColor" : "" );
+        }
+
+        function renderChart(svg, data) {
+          const yearArray = data.monthlyVariance.map((val) => val.year);
+          const minYear = Math.min(...yearArray) ;
+          const extractYear = (d) => d.year;
+
+          const yScale = d3
+            .scaleBand()
+            .domain([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+            .rangeRound([0, height])
+            .padding(0);
+
+          const xScale = d3
+            .scaleBand()
+            .domain(yearArray)
+            .range([0, width]);
+
+          const yAxis = d3
+            .axisLeft()
+            .scale(yScale)
+            .tickValues(yScale.domain())
+            .tickFormat(function (month) {
+              const date = new Date(0);
+              date.setUTCMonth(month);
+              const format = d3.utcFormat('%B');
+              return format(date);
+            })
+            .tickSize(10, 1);
+
+          const xAxis = d3
+            .axisBottom()
+            .scale(xScale)
+            .tickValues(xScale.domain().filter(year => year % 10 === 0))
+            .tickFormat(year => {
+              var date = new Date(0);
+              date.setUTCFullYear(year);
+              var format = d3.utcFormat('%Y');
+              return format(date);
+            })
+            .tickSize(10, 1);
+
+          svg
+            .append('g')
+            .classed('y-axis', true)
+            .attr('id', 'y-axis')
+            .attr('transform', `translate(${padding.left}, ${padding.top})`)
+            .call(yAxis)
+
+          svg
+            .append('g')
+            .classed('x-axis', true)
+            .attr('id', 'x-axis')
+            .attr('transform', `translate(${padding.left}, ${padding.top + height})`)
+            .call(xAxis);
+
+          svg
+            .append('g')
+            .attr('transform', `translate(${padding.left}, ${padding.top})`)
+            .selectAll('rect')
+            .data(data.monthlyVariance)
+            .enter()
+            .append('rect')
+            .attr('class', 'cell')
+            .attr('data-month', dataItem => dataItem.month - 1)
+            .attr('data-year', dataItem => dataItem.year)
+            .attr('data-temp', dataItem => dataItem.variance)
+            .attr('width', '5')
+            .attr('height', '33')
+            .attr('x', dataItem => (dataItem.year - minYear) * 5)
+            .attr('y', dataItem => (dataItem.month - 1) * 33)
+            .attr('fill', dataItem => {
+              const referencesCopy = {...references};
+              referencesCopy.values = [1.7, ...referencesCopy.values, 13.9];
+              let referenceValueRanges = new Array();
+
+              for (let index = 0; index < referencesCopy.values.length; index++) {
+                const value = referencesCopy.values[index];
+                const nextValue = referencesCopy.values[index + 1];
+                if (nextValue) {
+                  referenceValueRanges.push([value, nextValue]);
+                }
+              }
+
+              let referenceValueRangeIndex = 0;
+              for (referenceValueRangeIndex = 0; referenceValueRangeIndex < referenceValueRanges.length; referenceValueRangeIndex++) {
+                let referenceValueRange = referenceValueRanges[referenceValueRangeIndex];
+                let temperature = data.baseTemperature + dataItem.variance;
+                if (temperature >= referenceValueRange[0] && temperature <= referenceValueRange[1]) {
+                  break;
+                }
+              }
+
+              return references.colors[referenceValueRangeIndex];
+            })
+            .on("mouseover", function(event, data) {
+              const x = event.clientX;
+              const y = event.clientY;
+              renderTooltip(data, x, y);
+            })
+            .on("mouseout", function() {
+              d3.select("#tooltip").style("display", "none");
+            });
+
+        }
+    
+        renderSubTitle(main, data);
+        renderLegends(svg);
+        renderChart(svg, data);
+      });
+    </script>
+  </body>
+</html>
